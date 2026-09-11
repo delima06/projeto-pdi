@@ -54,22 +54,14 @@ for cor in cores_eva:
         else:
             img_escala = img
             
-
         cinza_cor = cv2.cvtColor(img_escala, cv2.COLOR_BGR2GRAY)
-        
-
-        _, mascara_branco = cv2.threshold(cinza_cor, 200, 255, cv2.THRESH_BINARY)
-        
+        limiar_adaptativo = np.percentile(cinza_cor, 95)
+        _, mascara_branco = cv2.threshold(cinza_cor, limiar_adaptativo, 255, cv2.THRESH_BINARY)
         b, g, r = cv2.split(img_escala)
         
-
-        if cv2.countNonZero(mascara_branco) > 1000:
-
-            media_b = cv2.mean(b, mask=mascara_branco)[0]
-            media_g = cv2.mean(g, mask=mascara_branco)[0]
-            media_r = cv2.mean(r, mask=mascara_branco)[0]
-        else:
-            media_b, media_g, media_r = np.mean(b), np.mean(g), np.mean(r)
+        media_b = cv2.mean(b, mask=mascara_branco)[0]
+        media_g = cv2.mean(g, mask=mascara_branco)[0]
+        media_r = cv2.mean(r, mask=mascara_branco)[0]
             
         media_total = (media_b + media_g + media_r) / 3
         
