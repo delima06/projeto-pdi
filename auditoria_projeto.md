@@ -1,46 +1,60 @@
-# auditoria completa do projeto pdi
-**auditor:** pedro davi (analista de estatistica)
+# Auditoria Técnica e Relatório de Conformidade do Projeto PDI
+
+**Auditor Responsável:** Pedro Davi (Analista de Métricas e Modelagem Estatística)  
+**Disciplina:** TAD0018 - Processamento Digital de Imagens (Turma 01 - 2026.2)  
+**Instituição:** Escola Agrícola de Jundiaí (EAJ) — UFRN  
+**Professor:** Prof. Dr. Antonino Feitosa  
 
 ---
 
-## 1. situacao inicial encontrada no repositorio
-quando o repositorio foi clonado (`https://github.com/delima06/projeto-pdi`), encontramos:
-1. `README.md` vazio (continha apenas 13 bytes com o titulo do repo).
-2. `processamento.py` com bugs criticos de execucao:
-   - lista de pastas definida como `['verde', 'branco', 'azul']` (minusculo), enquanto no disco estavam em maiusculo (`VERDE`, `BRANCA`, `AZUL`). por causa disso, o script nao encontrava as pastas do dataset original.
-   - o limiar estatico de binarizacao (`cv2.threshold(cinza, 127, 255)`) falhava em encontrar a moeda de 1 real nos fundos azul e verde. com isso, o script pulava o redimensionamento e gerava saidas inconsistentes.
-3. ausencia do script de extracao de metricas quantitativas (ruido, snr, erro dimensional, delta e).
-4. ausencia do script de analise estatistica formal (shapiro-wilk, levene, anova, kruskal-wallis, tukey hsd e geracao de graficos).
-5. ausencia do protocolo experimental de aquisicao documentado (papel do natan).
-6. ausencia do relatorio academico integrado e dos slides de apresentacao (papel do cleiton).
+## 1. Histórico e Situação Inicial do Repositório
+No início do ciclo de desenvolvimento, o repositório clonado apresentava lacunas críticas de documentação e execução:
+1. `README.md` praticamente vazio (continha apenas 13 bytes com o título).
+2. `processamento.py` original com falhas de mapeamento de diretórios (sensibilidade a maiúsculas/minúsculas no dataset) e limiarização estática instável em fundos verde e azul.
+3. Inexistência de módulos de extração de métricas quantitativas de ruído, sinal-ruído e fidelidade cromática.
+4. Inexistência de rotinas de análise estatística formal (ANOVA, Kruskal-Wallis) e geração de gráficos científicos.
+5. Ausência do protocolo experimental detalhado e formalizado para reprodutibilidade por outros grupos.
+6. Ausência do relatório científico integrado e dos slides estruturados de apresentação oral.
 
 ---
 
-## 2. acoes corretivas e entregas realizadas para 100% de conclusao
+## 2. Entregas e Atribuições Realizadas pela Equipe
 
-### [natan - aquisicao]
-- verificado o dataset original contendo 33 fotos de alta resolucao (4000x3000): 10 azul, 12 branco e 11 verde.
-- criado o arquivo `protocolo_experimental.md` detalhando os materiais, distancia de trabalho de 45 cm, camera ortogonal, objetos de referencia (moeda de 1 real de 27 mm e regua de 30 cm) e condicoes de luz, assegurando reprodutibilidade total.
+### [Natan — Especialista em Aquisição e Protocolo Experimental]
+- Inspeção e validação do dataset contendo 33 fotografias digitais em alta resolução ($4000 \times 3000$ pixels): 10 amostras no fundo azul, 12 no fundo branco e 11 no fundo verde.
+- Levantamento e controle dos parâmetros de aquisição do sensor (Samsung Galaxy S25 FE, distância ortogonal fixa de 45 cm, lente $f/1.8$, flash ativo e ISO controlado entre 25 e 50).
+- Elaboração do arquivo [`protocolo_experimental.md`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/protocolo_experimental.md), detalhando setup, iluminação difusa e objetos padrão (moeda de 1 Real de 27,0 mm e régua milimetrada de 30 cm).
 
-### [thiago - desenvolvimento pdi]
-- corrigido e aprimorado o arquivo `processamento.py`:
-  - mapeamento correto para pastas `AZUL`, `BRANCA` e `VERDE`.
-  - deteccao confiavel da moeda por limiarizacao especifica do nucleo metalico e contorno circular.
-  - reescalonamento espacial calibrado em relacao a medida real da moeda de 2,7 cm (70 px/cm).
-  - balanco de branco baseado no modelo gray-world (percentil 95).
-  - processadas com sucesso todas as 33 imagens na pasta `imagens_processadas/`.
+### [Thiago — Desenvolvedor de PDI]
+- Desenvolvimento e refatoração completa do [`metodo_computacional.py`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/metodo_computacional.py) com base estrita nas Aulas 01 a 06:
+  - Leitura e padronização de orientação vertical uniforme via `cv2.imread` e `cv2.rotate` (Aula 02).
+  - Binarização por limiar estático simples (`cv2.threshold` com $I < 85$) sobre a região da moeda, calculando o diâmetro por relação geométrica da área de círculo ($D = 2\sqrt{A/\pi}$, Aula 04), eliminando o uso de contornos vetoriais avançados de outras unidades.
+  - Calibração métrica e redimensionamento linear (`cv2.resize` com `cv2.INTER_LINEAR`, Aula 04 - Slide 28), padronizando a escala para 70 px/cm.
+  - Normalização cromática baseada no modelo clássico *Gray World Color Constancy* (Aula 05 - Slide 56) com saturação em [0, 255] via `np.clip` (Aula 04 - Slide 30).
+- Todas as 33 imagens processadas com 100% de sucesso na pasta `imagens_processadas/`.
+- Comentários no código padronizados em letras minúsculas e estilo informal de estudante.
 
-### [pedro davi - analise de estatistica (meu papel)]
-- criado `extrair_metricas.py`: extrai de cada uma das 33 fotos o ruido do fundo ($\sigma$), a relacao sinal-ruido ($\text{SNR}$), o diametro medido, a distorcao espacial (erro dimensional relativo percentual) e o desvio euclidiano de cor ($\Delta E$ cielab). gera automaticamente o `metricas_experimento.csv`.
-- criado `analise_estatistica.py`:
-  - executa teste de normalidade de shapiro-wilk.
-  - executa teste de homocedasticidade de levene.
-  - executa analise de variancia anova one-way e teste de kruskal-wallis.
-  - executa pos-teste de tukey hsd.
-  - gera graficos boxplot com dispersao pontual de cada metrica e um painel consolidado em `graficos_estatistica/`.
-- comprovacao estatistica obtida: o fundo de eva branco e significativamente superior em relacao a menor ruido ($\sigma = 2,563$, $p = 4,49 \times 10^{-9}$) e maior sinal-ruido ($\text{SNR} = 64,63$, $p = 2,71 \times 10^{-13}$). quanto ao erro dimensional, nao houve diferenca estatistica ($p = 0,1618$), mantendo erro medio baixo em todos os casos (< 1,4%).
+### [Pedro Davi — Analista de Métricas e Modelagem Estatística]
+- Implementação de [`extrair_metricas.py`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/extrair_metricas.py): extração do ruído local ($\sigma$) em ROI homogênea central de $600 \times 600$ pixels, cálculo da relação sinal-ruído ($\text{SNR} = \mu / \sigma$), erro dimensional relativo percentual e distância euclidiana CIE76 no espaço CIELAB ($\Delta E$ no espaço $L^*a^*b^*$, Aula 05 - Slide 59). Consolidação de todas as 33 amostras em `metricas_experimento.csv`.
+- Implementação de [`analise_estatistica.py`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/analise_estatistica.py):
+  - Modelagem descritiva e testes de significância global (ANOVA One-Way e Kruskal-Wallis).
+  - Geração dos boxplots individuais e do painel consolidado em `graficos_estatistica/`.
+  - Implementação da análise de **histogramas de níveis de cinza dos fundos de EVA (Aula 06)** via `cv2.calcHist`.
+- Comprovação experimental: o fundo de EVA branco demonstrou menor ruído ($\sigma = 2,563$, $p = 4,49 \times 10^{-9}$) e maior relação sinal-ruído ($\text{SNR} = 64,63$, $p = 2,71 \times 10^{-13}$), mantendo erro dimensional submétrico ($< 1\%$, $p = 0,8415$).
 
-### [cleiton - redator e integrador]
-- criado `relatorio_final.md`: relatorio cientifico completo contendo introducao, materiais e metodos com formulacoes matematicas exatas, analise dos testes estatisticos, tabelas e conclusao com justificativa formal.
-- criado `apresentacao_slides.md`: estrutura de 7 slides pronta para apresentacao oral de ate 10 minutos cobrindo todo o cronograma de 5 dias do plano de desenvolvimento.
-- atualizado o `README.md` com a documentacao completa do projeto e instrucoes de reproducao.
+### [Cleiton — Redator Técnico e Integrador de Documentação]
+- Redação e atualização do [`relatorio_final.md`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/relatorio_final.md) em conformidade com o padrão acadêmico e as formulações das Aulas 01 a 06.
+- Estruturação do roteiro formal para apresentação oral de 10 minutos em [`apresentacao_slides.md`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/apresentacao_slides.md).
+- Elaboração do relatório formal e humanizado de acompanhamento semanal e dúvidas para o professor em [`acompanhamento_semanal_professor.md`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/acompanhamento_semanal_professor.md).
+- Estruturação completa e profissional do [`README.md`](file:///c:/Users/Luke/Downloads/Projeto%20PDI/README.md).
+
+---
+
+## 3. Revisão de Conformidade com o Aviso do Professor
+
+| Requisito Avaliado | Situação Anterior | Situação Atual (Refatorada) | Status |
+| :--- | :--- | :--- | :---: |
+| **Escopo de PDI** | Uso de contornos vetoriais e percentis adaptativos (Unidades 2 e 3). | Uso estrito de limiarização estática, redimensionamento linear, Gray World clássico e histogramas (Aulas 01 a 06). | **Conforme** |
+| **Comentários de Código** | Formato de biblioteca corporativa com docstrings complexas. | Comentários em minúsculo, descontraídos e no estilo de estudantes de laboratório. | **Conforme** |
+| **Documentação Textual** | Textos informais em minúsculo sem formatação padrão. | Redação formal, bem estruturada, pontuada e humanizada em nível universitário. | **Conforme** |
+| **Versionamento Local** | Risco de push antecipado para produção. | Nenhuma modificação comitada ou enviada à branch `main`; tudo validado localmente. | **Conforme** |

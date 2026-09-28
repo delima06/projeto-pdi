@@ -1,48 +1,69 @@
-# roteiro de apresentacao do projeto pdi (slides / pitch - 10 minutos)
-**equipe:** natan, thiago, pedro davi, cleiton
+# Roteiro da Apresentação Oral de Projeto (Pitch de 10 Minutos)
+
+**Disciplina:** TAD0018 - Processamento Digital de Imagens (Turma 01 - 2026.2)  
+**Instituição:** Escola Agrícola de Jundiaí (EAJ) — Universidade Federal do Rio Grande do Norte (UFRN)  
+**Professor Responsável:** Prof. Dr. Antonino Feitosa  
+**Equipe de Apresentadores:** Natan, Thiago, Pedro Davi e Cleiton  
 
 ---
 
-### slide 1: titulo e equipe (tempo: 1 min)
-- **titulo:** avaliacao experimental das condicoes de aquisicao em pdi: comparacao estatistica de fundos de eva
-- **autores:** natan (aquisicao), thiago (desenvolvimento), pedro davi (estatistica), cleiton (redacao e apresentacao)
-- **contexto:** disciplina de processamento digital de imagens
+### Slide 1: Título e Identificação da Equipe (Duração: 1 min)
+- **Título do Projeto:** Avaliação Experimental das Condições de Aquisição em PDI: Comparação Estatística de Fundos em EVA Utilizando Fundamentos das Aulas 01 a 06.
+- **Integrantes e Funções:**
+  - **Natan:** Especialista em Aquisição e Protocolo Experimental.
+  - **Thiago:** Desenvolvedor de Processamento Digital de Imagens.
+  - **Pedro Davi:** Analista de Métricas e Modelagem Estatística.
+  - **Cleiton:** Redator Técnico e Integrador de Documentação.
+- **Contextualização:** Projeto aplicado da Unidade 1, fundamentado no livro-texto de Gonzalez & Woods (2009) e nas aulas teóricas e práticas do laboratório.
 
-### slide 2: motivacao e problema (tempo: 1.5 min)
-- por que o cenario de aquisicao importa tanto? qualquer erro de iluminacao, reflexao ou cor de fundo impacta diretamente a segmentacao, medidas espaciais e cores.
-- **desafio:** qual e a melhor cor de fundo de eva (azul, branco ou verde) para aquisicao de imagens com precisao dimensional e baixo ruido?
+---
 
-### slide 3: materiais e protocolo experimental - natan (tempo: 1.5 min)
-- **cenario:** folhas de eva (azul claro, branco, verde claro), regua padrao e moeda de 1 real (diametro real = 27,0 mm).
-- **captura controlada:** camera fixa a 45 cm perpendicular, iluminacao uniforme e 33 imagens no total (10 azul, 12 branco, 11 verde).
-- garantia de reprodutibilidade conforme `protocolo_experimental.md`.
+### Slide 2: Motivação Teórica e Problema de Engenharia (Duração: 1,5 min)
+- **Por que a etapa de aquisição é crítica?** Erros no posicionamento físico, reflexão difusa inadequada do suporte ou iluminação não controlada propagam ruídos espúrios e degradam todas as etapas subsequentes do pipeline (segmentação, extração de características e mensuração dimensional).
+- **Problema Central:** Qual cor de fundo de EVA (azul claro, branco ou verde claro) proporciona o menor nível de ruído de sensor, a maior relação sinal-ruído e a maior acurácia espacial para calibração geométrica de imagens?
 
-### slide 4: processamento digital de imagens - thiago (tempo: 2 min)
-- **script desenvolvido:** `processamento.py`
-- correcao automatica de orientacao.
-- deteccao robusta de contorno da moeda via limiarizacao e ajuste de circulo minimo.
-- calibracao espacial (relacao pixel por centimetro) e redimensionamento padrao.
-- balanco de branco baseado no modelo gray-world no percentil 95.
-- todas as 33 imagens salvas na pasta `imagens_processadas/`.
+---
 
-### slide 5: formulacao das metricas e testes estatisticos - pedro davi (tempo: 2 min)
-- **metricas quantitativas:**
-  1. ruido do fundo: desvio padrao ($\sigma$) em roi homogenea central de 600x600 px.
-  2. relacao sinal-ruido (snr): media / sigma.
-  3. distorcao espacial: erro dimensional relativo percentual contra o diametro nominal de 27 mm.
-  4. fidelidade de cor: distancia euclidiana $\Delta E$ no espaco cielab no miolo da moeda.
-- **metodologia estatistica:**
-  - teste de normalidade (shapiro-wilk) e teste de homocedasticidade (levene).
-  - analise de variancia anova one-way e kruskal-wallis ($\alpha = 0,05$).
-  - pos-teste de tukey hsd para comparacoes pareadas.
+### Slide 3: Protocolo Experimental e Aquisição Laboratorial — Natan (Duração: 1,5 min)
+- **Cenário Experimental:** Bancada fixa em laboratório mantendo a câmera perpendicular (ortogonal a 90°) a uma distância controlada de 45 cm do plano de captura.
+- **Padrões de Referência:** Folhas de EVA de $40 \times 60\text{ cm}$, moeda de 1 Real (diâmetro real nominal conhecido de $27,0\text{ mm}$) e régua milimetrada de $30\text{ cm}$.
+- **Dataset Coletado:** 33 imagens digitais em alta resolução ($4000 \times 3000$ pixels) capturadas com sensor Samsung Galaxy S25 FE (10 fotos em fundo azul, 12 em branco e 11 em verde).
+- **Garantia de Reprodutibilidade:** Protocolo detalhado disponível em `protocolo_experimental.md`.
 
-### slide 6: resultados e comparacoes (tempo: 1 min)
-- exibir o grafico consolidado: `graficos_estatistica/painel_consolidado_metricas.png`
-- **ruido ($\sigma$):** branco = 2,563 vs azul = 3,340 vs verde = 4,105 ($p = 4,49 \times 10^{-9}$ - diferenca comprovada!).
-- **snr:** branco = 64,63 vs azul = 47,03 vs verde = 37,09 ($p = 2,71 \times 10^{-13}$).
-- **erro dimensional:** sem diferenca estatistica entre os fundos ($p = 0,1618$), todos com erro menor que 1,4% (algoritmo estavel).
+---
 
-### slide 7: conclusao e recomendacao final (tempo: 1 min)
-- comprovacao por significancia estatistica: o **fundo de eva branco** e o vencedor.
-- menor ruido, maior snr e excelente estabilidade geometrica.
-- codigo aberto, documentado e reproduzivel no repositorio.
+### Slide 4: Método Computacional de Padronização — Thiago (Duração: 2 min)
+- **Script Implementado:** `metodo_computacional.py` (desenvolvido estritamente com conceitos das Aulas 01 a 06).
+- **Etapas do Processamento:**
+  1. *Padronização de Orientação (Aula 02):* Detecção de imagens na horizontal e rotação automática de 90° com `cv2.rotate` para orientação vertical uniforme ($3000 \times 4000$).
+  2. *Segmentação e Medição do Alvo (Aulas 02 e 04):* Binarização simples por limiar estático (`cv2.threshold` com $I < 85$) e contagem matricial de pixels para obter o diâmetro pela geometria circular ($D = 2\sqrt{A/\pi}$), dispensando contornos vetoriais avançados de outras unidades.
+  3. *Calibração Espacial e Redimensionamento (Aula 04):* Aplicação de `cv2.resize` com interpolação bilinear (`cv2.INTER_LINEAR`, Slide 28) para fixar a escala em 70 pixels por centímetro.
+  4. *Normalização Cromática com Gray World (Aula 05 - Slide 56):* Cálculo da média cinza neutra $\text{gray} = (\bar{R}+\bar{G}+\bar{B})/3$, multiplicação matricial e saturação no intervalo [0, 255] via `np.clip` (Aula 04 - Slide 30).
+- **Resultado:** 100% das 33 imagens processadas com êxito na pasta `imagens_processadas/`.
+
+---
+
+### Slide 5: Métricas Quantitativas e Formulação Estatística — Pedro Davi (Duração: 2 min)
+- **Métricas Fundamentadas nas Aulas:**
+  1. *Ruído do Fundo ($\sigma$ - Aulas 01 e 02):* Desvio padrão amostral em uma ROI central homogênea de $600 \times 600$ pixels.
+  2. *Relação Sinal-Ruído ($\text{SNR}$ - Aula 02):* Razão $\mu / \sigma$ indicando a pureza do sinal luminoso captado.
+  3. *Erro Dimensional Relativo ($E_{\text{rel}}$ - Aula 04):* Desvio percentual entre o diâmetro medido em pixels reescalonados e os $27,0\text{ mm}$ reais.
+  4. *Fidelidade Cromática ($\Delta E$ CIELAB - Aula 05 - Slide 59):* Distância euclidiana CIE76 medida no núcleo da moeda.
+  5. *Perfil Espectral de Intensidade (Aula 06):* Histogramas de níveis de cinza extraídos via `cv2.calcHist`.
+- **Modelagem Estatística:** Estatística descritiva e testes de análise de variância ANOVA One-Way ($\alpha = 0,05$).
+
+---
+
+### Slide 6: Resultados Experimentais e Discussão (Duração: 1 min)
+- **Exibição dos Gráficos:** Painel integrado 2x2 (`painel_consolidado_metricas.png`) e perfil de histogramas (`histogramas_intensidade_fundos.png`).
+- **Nível de Ruído ($\sigma$):** Branco ($2,563 \pm 0,132$) vs. Azul ($3,340 \pm 0,333$) vs. Verde ($4,105 \pm 0,637$) — Diferença altamente significativa ($p = 4,49 \times 10^{-9}$).
+- **Relação Sinal-Ruído ($\text{SNR}$):** Fundo branco amplamente superior ($64,63 \pm 3,19$), superando o azul ($47,03$) e o verde ($37,09$) com $p = 2,71 \times 10^{-13}$.
+- **Histogramas da Aula 06:** O fundo branco exibe distribuição compacta e deslocada para altas luzes, enquanto verde e azul espalham a distribuição devido à absorção seletiva da energia luminosa.
+- **Acurácia Espacial:** Erro dimensional relativo abaixo de $0,85\%$ em todos os fundos, sem diferença estatística ($p = 0,8415$), validando a robustez da calibração métrica elementar.
+
+---
+
+### Slide 7: Conclusões e Recomendações — Cleiton (Duração: 1 min)
+- **Veredito Experimental:** O **fundo em EVA branco** é categoricamente a melhor escolha para aquisição de imagens no arranjo laboratorial avaliado.
+- **Justificativa Técnica:** Proporciona menor ruído de sensor, máxima pureza de sinal ($\text{SNR}$), excelente convergência para o balanço de cores Gray World e medição métrica com erro submétrico ($< 1\%$).
+- **Cumprimento do Escopo:** Projeto 100% reproduzível, documentado e rigorosamente construído sobre as técnicas das Aulas 01 a 06 de PDI.

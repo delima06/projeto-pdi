@@ -1,86 +1,121 @@
-# modulo para calcular as metricas das imagens (pedro davi)
-# calcula ruido do fundo, distorcao espacial da moeda e fidelidade de cor
+# modulo para extracao das metricas das imagens
+# feito por pedro davi (analista de estatistica)
+# usando as tecnicas basicas das aulas de pdi:
+# ruido do sensor e dispersao (aula 1 e 2)
+# relacao sinal-ruido snr (aula 2)
+# resolucao espacial e erro dimensional (aula 3 e 4)
+# diferenca de cor delta e cielab cie76 (aula 5 slide 59)
 
 import os
 import cv2
 import numpy as np
 import pandas as pd
 
-def extrair_metricas_imagem(caminho_imagem, cor_fundo, diametro_real_mm=27.0):
-    # le a imagem original
+# diametro real da moeda em milimetros (27 mm)
+diametro_real_mm = 27.0
+
+def extrair_metricas_imagem(caminho_imagem, cor_fundo):
+    # le a foto colorida original usando opencv da aula 2
     img = cv2.imread(caminho_imagem)
     if img is None:
         return None
+        
+    h_orig, w_orig = img.shape[:2]
     
+    # ajusta orientacao se estiver na horizontal
+    if w_orig > h_orig:
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        
     h, w = img.shape[:2]
     
-    # 1. metrica de ruido no fundo (eva)
-    # pegamos uma regiao de interesse (roi) central homogenea de 600x600 pixels longe de bordas e objetos
+    # 1. medicao do ruido no fundo homogêneo de eva (aula 1 e 2)
+    # pegamos uma regiao de interesse (roi) central de 600x600 pixels
     centro_y, centro_x = h // 2, w // 2
-    roi_tamanho = 300
-    roi_eva = img[centro_y - roi_tamanho : centro_y + roi_tamanho, centro_x - roi_tamanho : centro_x + roi_tamanho]
+    raio_roi = 300
+    roi_fundo = img[centro_y - raio_roi : centro_y + raio_roi, centro_x - raio_roi : centro_x + raio_roi]
     
-    # desvio padrao no canal de cinza
-    roi_cinza = cv2.cvtColor(roi_eva, cv2.COLOR_BGR2GRAY)
+    # converte para escala de cinza para medir a intensidade do sinal
+    roi_cinza = cv2.cvtColor(roi_fundo, cv2.COLOR_BGR2GRAY)
+    
+    # calcula o desvio padrao sigma (ruido do sensor na aquisicao)
     ruido_std = float(np.std(roi_cinza))
     
-    # snr local do fundo (media / desvio padrao)
+    # media de brilho do fundo
     media_fundo = float(np.mean(roi_cinza))
+    
+    # snr local do fundo (razao sinal-ruido da aula 2: media dividida pelo desvio)
     snr_fundo = float(media_fundo / (ruido_std + 1e-6))
     
-    # psnr estimativo considerando sinal maximo de 255 e mse = ruido_std^2
+    # psnr considerando valor maximo de 8 bits (255)
     psnr_estimado = float(10.0 * np.log10((255.0 ** 2) / ((ruido_std ** 2) + 1e-6)))
     
-    # 2. metrica de distorcao espacial e erro dimensional
-    # detectar a moeda de 1 real na imagem
-    # a moeda possui miolo escuro e borda de bronze com alto contraste em relacao ao fundo
-    cinza_total = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    mascara_escura = (cinza_total < 85).astype(np.uint8) * 255
+    # 2. medicao dimensional da moeda com tecnicas basicas da aula 2 e 4
+    cinza = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    mascara = (cinza < 85).astype(np.uint8) * 255
     
-    contornos, _ = cv2.findContours(mascara_escura, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # busca simples da regiao da moeda
+    passo = 80
+    tam_bloco = 250
+    melhor_bloco = None
+    max_pixels = 0
     
-    moeda_contorno = None
-    melhor_area = 0
-    for c in contornos:
-        area = cv2.contourArea(c)
-        # a moeda em 3000x4000 ocupa entre 10.000 e 35.000 pixels quadrados
-        if 10000 < area < 35000:
-            bx, by, bw, bh = cv2.boundingRect(c)
-            proporcao = float(bw) / bh if bh > 0 else 0
-            if 0.8 < proporcao < 1.25:
-                if area > melhor_area:
-                    melhor_area = area
-                    moeda_contorno = c
-                    
-    if moeda_contorno is not None:
-        (cx, cy), raio = cv2.minEnclosingCircle(moeda_contorno)
-        diametro_px = float(2.0 * raio)
-        bx, by, bw, bh = cv2.boundingRect(moeda_contorno)
+    for y in range(0, h - tam_bloco, passo):
+        for x in range(0, w - tam_bloco, passo):
+            qtd = np.count_nonzero(mascara[y:y+tam_bloco, x:x+tam_bloco])
+            if qtd > max_pixels:
+                max_pixels = qtd
+                melhor_bloco = (y, x)
+                
+    if melhor_bloco is not None and max_pixels > 5000:
+        by, bx = melhor_bloco
+        roi_bloco = mascara[by:by+tam_bloco, bx:bx+tam_bloco]
+        ys, xs = np.where(roi_bloco == 255)
+        cy_roi = int(np.mean(ys))
+        cx_roi = int(np.mean(xs))
         
-        # razao de aspecto da moeda (o ideal do circulo eh 1.0)
-        razao_aspecto = float(bw) / float(bh) if bh > 0 else 1.0
-        distorcao_circularidade = abs(1.0 - razao_aspecto) * 100.0
+        y1 = max(0, by + cy_roi - 100)
+        y2 = min(h, by + cy_roi + 100)
+        x1 = max(0, bx + cx_roi - 100)
+        x2 = min(w, bx + cx_roi + 100)
         
-        # centro do miolo prateado da moeda para medicao de cor
-        mask_nucleo = np.zeros((h, w), dtype=np.uint8)
-        cv2.circle(mask_nucleo, (int(cx), int(cy)), int(raio * 0.50), 255, -1)
+        roi_moeda = mascara[y1:y2, x1:x2]
+        area_moeda = np.count_nonzero(roi_moeda == 255)
         
-        # extrair cor lab do miolo
+        # diametro pela formula geometrica basica d = 2 * raiz(area / pi)
+        diametro_px = float(2.0 * np.sqrt(area_moeda / np.pi))
+        
+        # centro absoluto da moeda
+        centro_moeda_x = int(x1 + cx_roi)
+        centro_moeda_y = int(y1 + cy_roi)
+        
+        # escala nominal aproximada do experimento a 45 cm (~60.5 px/cm -> 6.05 px/mm)
+        # erro dimensional relativo percentual em relacao aos 27 mm nominais
+        diametro_medido_mm = float(diametro_px / 6.02)
+        erro_dimensional_relativo = float(abs(diametro_medido_mm - diametro_real_mm) / diametro_real_mm * 100.0)
+        
+        # 3. fidelidade de cor no centro do miolo metalico (cielab da aula 5 slide 59)
+        # pega uma pequena regiao circular de raio 25 pixels no centro do miolo
         img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        l_nucleo, a_nucleo, b_nucleo, _ = cv2.mean(img_lab, mask=mask_nucleo)
+        miolo_lab = img_lab[centro_moeda_y - 25 : centro_moeda_y + 25, centro_moeda_x - 25 : centro_moeda_x + 25]
+        miolo_bgr = img[centro_moeda_y - 25 : centro_moeda_y + 25, centro_moeda_x - 25 : centro_moeda_x + 25]
         
-        # extrair bgr do miolo
-        b_val, g_val, r_val, _ = cv2.mean(img, mask=mask_nucleo)
+        lab_l = float(np.mean(miolo_lab[:, :, 0]))
+        lab_a = float(np.mean(miolo_lab[:, :, 1]))
+        lab_b = float(np.mean(miolo_lab[:, :, 2]))
         
-        moeda_encontrada = True
+        bgr_b = float(np.mean(miolo_bgr[:, :, 0]))
+        bgr_g = float(np.mean(miolo_bgr[:, :, 1]))
+        bgr_r = float(np.mean(miolo_bgr[:, :, 2]))
+        
+        moeda_ok = True
     else:
-        # fallback caso falhe deteccao automatica
         diametro_px = np.nan
-        distorcao_circularidade = np.nan
-        l_nucleo, a_nucleo, b_nucleo = np.nan, np.nan, np.nan
-        b_val, g_val, r_val = np.nan, np.nan, np.nan
-        moeda_encontrada = False
-
+        diametro_medido_mm = np.nan
+        erro_dimensional_relativo = np.nan
+        lab_l, lab_a, lab_b = np.nan, np.nan, np.nan
+        bgr_b, bgr_g, bgr_r = np.nan, np.nan, np.nan
+        moeda_ok = False
+        
     return {
         'arquivo': os.path.basename(caminho_imagem),
         'cor_fundo': cor_fundo,
@@ -88,52 +123,46 @@ def extrair_metricas_imagem(caminho_imagem, cor_fundo, diametro_real_mm=27.0):
         'snr_fundo': snr_fundo,
         'psnr_estimado': psnr_estimado,
         'diametro_px': diametro_px,
-        'distorcao_circularidade': distorcao_circularidade,
-        'lab_l': l_nucleo,
-        'lab_a': a_nucleo,
-        'lab_b': b_nucleo,
-        'bgr_b': b_val,
-        'bgr_g': g_val,
-        'bgr_r': r_val,
-        'moeda_detectada': moeda_encontrada
+        'diametro_medido_mm': diametro_medido_mm,
+        'erro_dimensional_relativo': erro_dimensional_relativo,
+        'lab_l': lab_l,
+        'lab_a': lab_a,
+        'lab_b': lab_b,
+        'bgr_b': bgr_b,
+        'bgr_g': bgr_g,
+        'bgr_r': bgr_r,
+        'moeda_detectada': moeda_ok
     }
 
-def processar_dataset_completo(pasta_dataset='dataset_original', pasta_saida='.'):
-    # mapeia as pastas de cores existentes
-    pastas_cores = {
-        'azul': os.path.join(pasta_dataset, 'AZUL'),
-        'branco': os.path.join(pasta_dataset, 'BRANCA'),
-        'verde': os.path.join(pasta_dataset, 'VERDE')
+def processar_dataset(pasta_raiz='dataset_original', arquivo_saida='metricas_experimento.csv'):
+    pastas = {
+        'AZUL': 'azul',
+        'BRANCA': 'branco',
+        'VERDE': 'verde'
     }
     
-    dados = []
+    linhas = []
+    print("iniciando extracao de metricas com tecnicas de pdi...")
     
-    print("iniciando extracao de metricas de todas as imagens...")
-    for cor, pasta in pastas_cores.items():
-        if not os.path.exists(pasta):
-            print(f"aviso: pasta {pasta} nao encontrada")
+    for pasta_in, cor_nome in pastas.items():
+        dir_cor = os.path.join(pasta_raiz, pasta_in)
+        if not os.path.exists(dir_cor):
+            print(f"aviso: pasta {dir_cor} nao existe")
             continue
             
-        arquivos = sorted([f for f in os.listdir(pasta) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
-        print(f"processando fundo {cor} ({len(arquivos)} imagens)...")
-        
+        arquivos = sorted([f for f in os.listdir(dir_cor) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
         for arq in arquivos:
-            caminho = os.path.join(pasta, arq)
-            res = extrair_metricas_imagem(caminho, cor)
+            caminho_completo = os.path.join(dir_cor, arq)
+            res = extrair_metricas_imagem(caminho_completo, cor_nome)
             if res is not None:
-                dados.append(res)
+                linhas.append(res)
+                print(f"[{cor_nome}] {arq}: ruido={res['ruido_std']:.2f}, snr={res['snr_fundo']:.2f}, diam={res['diametro_px']:.1f}px")
                 
-    df = pd.DataFrame(dados)
+    df = pd.DataFrame(linhas)
     
-    # calcular resolucao espacial media em pixels por mm (usando diametro real de 27.0 mm da moeda)
-    media_diametro_global = df['diametro_px'].mean()
-    escala_global_px_por_mm = media_diametro_global / 27.0
-    
-    # calcular o diametro medido em mm e o erro dimensional relativo (%)
-    df['diametro_medido_mm'] = df['diametro_px'] / escala_global_px_por_mm
-    df['erro_dimensional_relativo'] = np.abs(df['diametro_medido_mm'] - 27.0) / 27.0 * 100.0
-    
-    # calcular fidelidade de cor (delta e) tomando como referencia a media do miolo prateado de todas as amostras
+    # calcula a distancia euclidiana de cor delta e cie76 da aula 5 (slide 59)
+    # delta e = raiz((l - l_ref)^2 + (a - a_ref)^2 + (b - b_ref)^2)
+    # usamos a media de todas as fotos como referencia de cor neutra
     l_ref = df['lab_l'].mean()
     a_ref = df['lab_a'].mean()
     b_ref = df['lab_b'].mean()
@@ -144,13 +173,9 @@ def processar_dataset_completo(pasta_dataset='dataset_original', pasta_saida='.'
         (df['lab_b'] - b_ref) ** 2
     )
     
-    # salvar planilha csv com todas as metricas
-    caminho_csv = os.path.join(pasta_saida, 'metricas_experimento.csv')
-    df.to_csv(caminho_csv, index=False, float_format='%.4f')
-    print(f"tabela de metricas salva com sucesso em: {caminho_csv}")
-    print(f"total de fotos processadas: {len(df)}")
-    
+    df.to_csv(arquivo_saida, index=False)
+    print(f"\nconcluido! {len(df)} amostras salvas em {arquivo_saida}")
     return df
 
 if __name__ == '__main__':
-    processar_dataset_completo()
+    processar_dataset()
